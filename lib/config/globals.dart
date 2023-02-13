@@ -1,6 +1,6 @@
 
 class Globals{
-  static final mainUrl= "http://192.168.1.102:4000";
+  static final mainUrl= "http://192.168.0.102:4000";
   static final loginUrl= mainUrl+"/business/login";
   static final businessUrl= mainUrl+"/business/products/all";
   static final picturesUrl = mainUrl+"/products/images";

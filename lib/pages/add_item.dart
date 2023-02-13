@@ -2,6 +2,7 @@ import 'dart:convert';
 // import 'dart:html';
 
 import 'dart:io';
+import 'package:collection/collection.dart';
 import 'dart:math';
 import 'package:path/path.dart' as path;
 
@@ -250,7 +251,7 @@ class _ProductFormState extends State<ProductForm> {
                                                   child: Text('add'),
                                                   onPressed: () {
                                                   //  add to table
-                                                  // [["Wise","kj"]],"attr_count":0,"attrs":["Wise","col2"]};
+
                                                     if(controller.text !=''){
                                                     setState(() {
                                                         //create new columns while keeping data in existing ones same
@@ -267,7 +268,7 @@ class _ProductFormState extends State<ProductForm> {
                                                           variations = variationJson["variations"];
                                                         //  add key value pair
                                                         //honestly think the code doesnt need this but fuck it, i'm tired
-                                                          variations[0][controller.text]=TextField(decoration: InputDecoration(hintText: "Enter "+controller.text),);
+                                                          variations[0][controller.text]="";
 
                                                         } else {
                                                           should_add_qty=true;
@@ -275,7 +276,7 @@ class _ProductFormState extends State<ProductForm> {
                                                           (variationJson["attrs"] as List)
                                                               .add(
                                                               "Qty");
-                                                          variations=[{"Qty":TextField(),controller.text: TextField(decoration: InputDecoration(hintText: "Enter ${controller.text}"))}];
+                                                          variations=[{"Qty":"",controller.text: ""}];
                                                           variationJson["variations"] = variations;
 
 
@@ -284,7 +285,7 @@ class _ProductFormState extends State<ProductForm> {
                                                             .add(
                                                             controller.text);
 
-                                                        print(variationJson);
+
 
 
                                                         _dataStream=Stream.value(variationJson["attrs"]);
@@ -320,7 +321,7 @@ class _ProductFormState extends State<ProductForm> {
                                   child: Column(
                                     children: [
                                       if((variationJson["attrs"] as List).isNotEmpty) GestureDetector(onTap:(){
-                                        
+
                                         showDialog(
                                           context: context,
                                           builder: (BuildContext context) {
@@ -348,11 +349,16 @@ class _ProductFormState extends State<ProductForm> {
                                                         // create initial map (row) but first check if exists
                                                         if(variations.isNotEmpty){
                                                           //  add key value pair
-                                                          variations[0][controller.text]=TextField(decoration: InputDecoration(hintText: "Enter "+controller.text),);
+                                                          for (int i = 0; i < variations.length; i++) {
+                                                            variations[i][controller.text]="";
+
+                                                          }
+
+                                                          variations[0][controller.text]="";
                                                           variationJson["variations"] = variations;
 
                                                         } else {
-                                                          variations.add({controller.text: TextField(decoration: InputDecoration(hintText: "Enter ${controller.text}"),)});
+                                                          variations.add({controller.text: ""});
                                                           variationJson["variations"] = variations;
 
                                                         }
@@ -381,14 +387,34 @@ class _ProductFormState extends State<ProductForm> {
                                       DataTable(
 
 
-                                        columns: ((snapshot.data) as List).map((name) => DataColumn(label: Text(name))).toList(),
-                                        rows: ((variationJson["variations"]) as List<Map>).map((row) => DataRow(
-                                          cells: row.keys.map((entry) => DataCell(row[entry]!)).toList(),
+                                        columns: ((variationJson["attrs"]) as List).map((name) => DataColumn(label: Text(name))).toList(),
+                                        rows: ((variationJson["variations"]) as List<Map>).mapIndexed((int index, row) => DataRow(
+                                          cells: row.keys.mapIndexed((int count, entry) => DataCell(TextFormField(onChanged: (text){
+                                            // (row[entry] = text.toString());
+
+                                            //index and count are the positions of the row and column respectively
+                                            print(variationJson);
+                                            updateJson(index, count,text);
+
+                                            print(index.toString()+"____"+ count.toString()+row.toString());
+
+
+                                            },
+                                          decoration: InputDecoration(hintText: "Enter ${row[entry].toString()}"),
+                                          )
+                                          )).toList(),
                                         )).toList(),
                                       ),
                                       if((variationJson["attrs"] as List).isNotEmpty) GestureDetector(onTap: (){
-                                      //  get the first variation and create a row just like it
-                                        ((variationJson["variations"]) as List<Map<dynamic, dynamic>>).add((variationJson["variations"][0]) );
+                                      //  get the ffirst variation and create a row just like it
+                                        var newMap = {};
+                                        for (int i = 0; i < variationJson["variations"][0].keys.length; i++) {
+                                          newMap[variationJson["variations"][0].keys.elementAt(i)]="";
+                                        }
+                                        print(newMap);
+
+
+                                        ((variationJson["variations"]) as List<Map<dynamic, dynamic>>).add(newMap);
                                         setState(() {
                                           _dataStream=Stream.value(variationJson["attrs"]);
                                         });
@@ -485,13 +511,15 @@ class _ProductFormState extends State<ProductForm> {
                       request.fields["imageCount"]=_images.length.toString();
                       request.fields["identifier"]=DateTime.now().toString();
                       request.fields["tag"]=_tag;
+                      variationJson["attr_count"]=(variationJson["variations"]).length;
+                      request.fields["attrs"]=jsonEncode(variationJson);
 
                       final prefs = await SharedPreferences.getInstance();
                       final token  = await prefs.getString('accesstoken').toString();
                       final businessId  = await prefs.getString('businessId').toString();
-                      var filename = await genRandToken(11)+"_"+businessId;
-
-                      request.fields["productId"]=
+                      var randToken = await genRandToken(11);
+                      var filename = randToken+"_"+businessId;
+                      request.fields["productId"]=randToken;
                       request.headers["businessId"]=businessId;
                       for(var i = 0; i < _images.length; i++) {
 
@@ -532,53 +560,13 @@ class _ProductFormState extends State<ProductForm> {
   }
 }
 
-class MyTable extends StatefulWidget {
-  
-  @override
-  _MyTableState createState() => _MyTableState();
+void updateJson(int rowPosition, int columnPosition, String text) {
+  (variationJson["variations"] as List<Map>)[rowPosition][(variationJson["variations"] as List<Map>)[rowPosition].keys.elementAt(columnPosition)]=text;
+  print(variationJson);
 }
 
 
 
-class _MyTableState extends State<MyTable> {
-  List<List<String>> _data = [['Column 1', 'Column 2'],
-    ['Row 1, Cell 1', 'Row 1, Cell 2'],
-    ['Row 2, Cell 1', 'Row 2, Cell 2'],
-  ];
-  
-
-  @override
-  Widget build(BuildContext context) {
-
-    return Container(
-      height: 200,
-      child: Column(
-        children: [
-          Container(
-            height: 200,
-            child: DataTable(
-              headingRowHeight: 20,
-
-              columns: _data.first.map((e) => DataColumn(label: Text(e.toString()))).toList(),
-              rows: _data.skip(1).map((e) => DataRow(cells: e.map((c) => DataCell(TextField())).toList())).toList(),
-            ),
-          ),
-          ElevatedButton(
-            child: Text('Add Column'),
-            onPressed: () {
-              setState(() {
-                // _data[0].add('New Column');
-                // for (var i = 1; i < _data.length; i++) {
-                //   _data[i].add('New Cell');
-                // }
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
 String genRandToken(int range) {
   var text = "";
   var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_";
